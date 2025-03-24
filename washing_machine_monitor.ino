@@ -15,16 +15,20 @@ int prewash_max_time = 600;
 int wash_max_time = 1200;
 int spin_max_time = 600;
 
+int current_temp = 27; // Celcius
+const float BETA = 3950; // the Beta Coefficient of this thermistor model
+
 String wash_cycle;
 boolean has_run = false;
 
 void setup() {
   // put your setup code here, to run once:
-  delay(10000);
+  delay(3000);
   lcd.begin(16, 2);
   lcd.print("STARTING WASH");
-  delay(1000);
+  delay(3000);
   lcd.clear();
+  updateCurrentTemp();
   pinMode(prewash_pwr, OUTPUT);
   pinMode(wash_pwr, OUTPUT);
   pinMode(spin_pwr, OUTPUT);
@@ -36,11 +40,19 @@ void setup() {
   pinMode(complete_sense, INPUT);
 }
 
+void updateCurrentTemp() {
+  int analogValue = analogRead(A0);
+  current_temp = 1 / (log(1 / (1023. / analogValue - 1)) / BETA + 1.0 / 298.15) - 273.15;
+  lcd.setCursor(12, 0);
+  lcd.print(current_temp);
+  lcd.print("C");
+}
+
 void controlCycle(int cycle_sense, int cycle_pwr, int timeout) {
   int seconds = timeout;
   while (digitalRead(cycle_sense) == 1 && seconds > 0) {
     int cycle_state = digitalRead(cycle_sense);
-    delay(1);
+    delay(10);
     seconds--;
 
     // Convert to minutes:seconds
@@ -49,7 +61,7 @@ void controlCycle(int cycle_sense, int cycle_pwr, int timeout) {
 
     // Display time in minutes:seconds format
     lcd.setCursor(0, 0);
-    lcd.print("TIME LEFT: ");
+    lcd.print("ETC: ");
     
     // Display minutes with leading zero
     if (minutes < 10) {
@@ -94,7 +106,7 @@ void loop() {
       digitalWrite(prewash_pwr, HIGH);
       int prewash_state = digitalRead(prewash_sense);
       if (prewash_state == 1) {
-        wash_cycle = "prewash";
+        wash_cycle = "PREWASH";
         displayCurrentCycle();
         controlCycle(prewash_sense, prewash_pwr, prewash_max_time);
       }
